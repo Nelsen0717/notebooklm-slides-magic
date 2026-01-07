@@ -152,20 +152,29 @@ CRITICAL INSTRUCTIONS:
 }
 
 /**
- * Perform inpainting for watermark removal
+ * Perform inpainting to remove ALL text from the slide
+ * This creates a clean background that editable text can be overlaid on
  */
 async function performInpainting(imageBase64: string): Promise<string> {
   // Use gemini-2.5-flash-image for better quality image editing
-  const prompt = `Edit this presentation slide image by removing ONLY the small "NotebookLM" watermark in the bottom-right corner.
+  const prompt = `Edit this presentation slide image by removing ALL text content.
 
-CRITICAL: Keep ALL existing text, graphics, and content EXACTLY as they are. Only remove the watermark.
+TASK: Remove every piece of text from this slide, including:
+- Headlines and titles
+- Body text and paragraphs
+- Bullet points
+- Numbers and statistics
+- Labels and captions
+- The "NotebookLM" watermark in the bottom-right corner
 
-The watermark to remove:
-- Location: Bottom-right corner
-- Content: Small gray text "NotebookLM" with a speech bubble icon
-- Size: Very small, approximately 100-150 pixels wide
+KEEP: Preserve only the background elements:
+- Background colors and gradients
+- Background images and photos
+- Decorative graphics and shapes
+- Icons and logos (without text)
+- Layout structure
 
-Action: Replace the watermark area with the surrounding background color/texture. Do not modify anything else.`
+OUTPUT: A clean background image with no text whatsoever. Fill all text areas naturally with the surrounding background color, texture, or pattern.`
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,

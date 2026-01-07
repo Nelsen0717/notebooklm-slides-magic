@@ -40,7 +40,7 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
                   : 'text-dark-50 hover:text-dark'
               )}
             >
-              處理後
+              純背景
             </button>
             <button
               onClick={() => setViewMode('preview')}
@@ -160,7 +160,7 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
         {isCompleted && viewMode === 'processed' && (
           <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
             <Wand2 className="w-3 h-3" />
-            浮水印已移除
+            文字已清除
           </div>
         )}
       </div>
@@ -185,7 +185,7 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
                 處理完成！
               </p>
               <p className="text-xs text-green-600 mt-1">
-                浮水印已移除，文字已提取 ({slide.textBlocks.length} 個區塊)
+                背景已清理，文字已提取 ({slide.textBlocks.length} 個區塊)
               </p>
             </div>
           </div>
