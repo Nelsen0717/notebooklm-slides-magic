@@ -114,8 +114,9 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
             {slide.textBlocks.map((block) => {
               // Check if text contains line breaks (multi-line)
               const isMultiLine = block.text.includes('\n')
-              // Calculate scaled font size based on container width
-              const scaledFontSize = Math.max(8, Math.round(block.style.fontSize * scaleFactor))
+              // Calculate scaled font size - use percentage-based sizing for better responsiveness
+              // The fontSize from OCR is based on 1920x1080, so scale it relative to container
+              const scaledFontSize = Math.max(10, Math.round(block.style.fontSize * scaleFactor))
 
               return (
                 <div
@@ -124,12 +125,11 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
                   style={{
                     left: `${block.box.x}%`,
                     top: `${block.box.y}%`,
-                    maxWidth: `${Math.max(block.box.width, 50)}%`, // Use maxWidth, minimum 50%
+                    maxWidth: `${100 - block.box.x}%`, // Extend to edge of container
                     fontSize: `${scaledFontSize}px`,
                     color: block.style.color,
                     fontWeight: block.style.bold ? 'bold' : 'normal',
                     textAlign: block.style.align,
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
                     lineHeight: 1.3,
                     whiteSpace: isMultiLine ? 'pre-wrap' : 'nowrap',
                   }}
@@ -170,12 +170,6 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
           </div>
         )}
 
-        {/* Watermark indicator (only on original) */}
-        {(isPending || viewMode === 'original') && (
-          <div className="absolute bottom-2 right-2 bg-dark/70 text-white text-xs px-2 py-1 rounded-md">
-            📍 NotebookLM 浮水印
-          </div>
-        )}
 
         {/* Preview mode badge */}
         {viewMode === 'preview' && (

@@ -75,27 +75,39 @@ async function performOcr(imageBase64: string): Promise<TextBlock[]> {
   const prompt = `Analyze this presentation slide image. Extract ALL text blocks with their precise positions.
 
 For each text block, provide:
-- text: the exact text content (preserve line breaks ONLY if the text is actually multi-line in the original)
-- box_2d: [ymin, xmin, ymax, xmax] coordinates in 0-1000 scale (0,0 = top-left, 1000,1000 = bottom-right)
-- font_size: estimated font size in pixels (based on image being 1920x1080)
-- is_bold: boolean (true if the text appears bold)
-- align: "left", "center", or "right" (based on text alignment)
-- color: EXACT hex color code of the text (e.g., "#FFFFFF" for white, "#FFD700" for gold, "#00BFFF" for blue, etc.)
+- text: the exact text content (preserve line breaks ONLY if actually multi-line)
+- box_2d: [ymin, xmin, ymax, xmax] coordinates in 0-1000 scale
+- font_size: estimated font size in pixels (for 1920x1080 image)
+- is_bold: boolean
+- align: "left", "center", or "right"
+- color: the ACTUAL hex color code of the text
 
 CRITICAL INSTRUCTIONS:
-1. Do NOT include the "NotebookLM" watermark in results (usually in bottom-right corner)
-2. Return coordinates using the 0-1000 scale relative to image dimensions
-3. Detect Chinese characters accurately
-4. Group text that belongs together into single blocks - keep headlines as ONE block, not split
-5. For large headlines, estimate font_size appropriately (often 48-72px for 1920x1080)
-6. For body text, font_size is usually 18-32px
-7. COLOR IS CRITICAL: Detect the ACTUAL color of each text block. Common colors include:
-   - White (#FFFFFF) for main text on dark backgrounds
-   - Gold/Yellow (#FFD700, #FFC107) for highlighted keywords
-   - Blue (#0066FF, #00BFFF) for accent text
-   - Red (#FF0000, #E53935) for emphasis
-   - If unsure, sample the dominant color from the text pixels
-8. BOX ACCURACY: Make sure the bounding box tightly fits the text, not too wide or too narrow`
+
+1. SKIP the "NotebookLM" watermark in bottom-right corner
+
+2. TEXT COLOR - VERY IMPORTANT:
+   - Look at the ACTUAL pixel color of the text
+   - On DARK backgrounds: text is usually WHITE (#FFFFFF) or light colors
+   - On LIGHT/WHITE backgrounds: text is usually BLACK (#000000) or dark colors
+   - On message bubbles (light gray/white): text is BLACK (#000000)
+   - Highlighted keywords may be GOLD (#FFD700), BLUE (#0066FF), or RED (#E53935)
+   - DO NOT default to white - check the actual color!
+
+3. FONT SIZE - estimate based on 1920x1080:
+   - Large headlines: 48-72px
+   - Medium titles: 32-48px
+   - Body text: 18-28px
+   - Small labels: 12-16px
+
+4. BOUNDING BOX - be PRECISE:
+   - Box should tightly fit the text
+   - Not too wide (causes misalignment)
+   - Not too narrow (cuts off text)
+   - Include the full width of the text line
+
+5. Keep related text together as single blocks
+6. Detect Chinese characters accurately`
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -164,24 +176,21 @@ CRITICAL INSTRUCTIONS:
  */
 async function performInpainting(imageBase64: string): Promise<string> {
   // Use gemini-2.5-flash-image for better quality image editing
-  const prompt = `Edit this presentation slide image by removing ALL text content.
+  const prompt = `Edit this presentation slide image to create a clean background.
 
-TASK: Remove every piece of text from this slide, including:
-- Headlines and titles
-- Body text and paragraphs
-- Bullet points
-- Numbers and statistics
-- Labels and captions
-- The "NotebookLM" watermark in the bottom-right corner
+TASK: Remove ALL text from this image:
+- Headlines, titles, body text, bullet points, numbers, labels
+- There is a BLACK RECTANGLE in the bottom-right corner - this is a MASKED AREA that needs to be filled with the surrounding background color/texture
 
-KEEP: Preserve only the background elements:
-- Background colors and gradients
-- Background images and photos
-- Decorative graphics and shapes
-- Icons and logos (without text)
-- Layout structure
+CRITICAL:
+- The black rectangle in the bottom-right is NOT part of the original image
+- Fill it with the surrounding background (usually dark gradient or solid color)
+- Do NOT write any text in the black rectangle area
+- Do NOT write "NotebookLM" or any watermark text anywhere
 
-OUTPUT: A clean background image with no text whatsoever. Fill all text areas naturally with the surrounding background color, texture, or pattern.`
+KEEP: Background colors, gradients, images, photos, decorative graphics, icons (without text)
+
+OUTPUT: A completely clean background with NO text anywhere on the image.`
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,

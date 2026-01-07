@@ -8,12 +8,12 @@ const MAX_RETRIES = 5
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]
 
 // Watermark region (bottom-right corner)
-// NotebookLM watermark is approximately: bottom 5%, right 12%
+// NotebookLM watermark - enlarged area to ensure full coverage
 const WATERMARK_REGION = {
-  xPercent: 88, // Start from 88% of width
-  yPercent: 95, // Start from 95% of height
-  widthPercent: 12, // 12% of total width
-  heightPercent: 5, // 5% of total height
+  xPercent: 80, // Start from 80% of width (more left)
+  yPercent: 92, // Start from 92% of height (higher up)
+  widthPercent: 20, // 20% of total width
+  heightPercent: 8, // 8% of total height
 }
 
 interface ProcessResult {
