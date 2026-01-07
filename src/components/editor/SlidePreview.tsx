@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { Slide } from '@/store/slides-store'
 import { cn } from '@/lib/utils'
 import { Wand2, Loader2, ImageIcon, AlertCircle, Download, Eye } from 'lucide-react'
@@ -11,8 +11,29 @@ interface SlidePreviewProps {
 
 type ViewMode = 'processed' | 'original' | 'preview'
 
+// Original slide dimensions (16:9 at 1920x1080)
+const ORIGINAL_WIDTH = 1920
+
 export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('processed')
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+
+  // Track container size for proper font scaling
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        setContainerSize({ width: rect.width, height: rect.height })
+      }
+    }
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
+
+  // Calculate scale factor for font size
+  const scaleFactor = containerSize.width > 0 ? containerSize.width / ORIGINAL_WIDTH : 0.5
 
   const isProcessing = slide.status === 'processing'
   const isCompleted = slide.status === 'completed'
@@ -80,7 +101,7 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
       )}
 
       {/* Image Preview */}
-      <div className="relative aspect-video bg-dark-400 rounded-xl overflow-hidden">
+      <div ref={containerRef} className="relative aspect-video bg-dark-400 rounded-xl overflow-hidden">
         <img
           src={displayImage}
           alt={`Slide ${slide.pageNumber}`}
@@ -90,25 +111,33 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
         {/* Text blocks overlay for preview mode */}
         {showTextOverlay && slide.textBlocks.length > 0 && (
           <div className="absolute inset-0 pointer-events-none">
-            {slide.textBlocks.map((block) => (
-              <div
-                key={block.id}
-                className="absolute whitespace-pre-wrap"
-                style={{
-                  left: `${block.box.x}%`,
-                  top: `${block.box.y}%`,
-                  width: `${block.box.width}%`,
-                  fontSize: `${Math.max(8, block.style.fontSize * 0.5)}px`,
-                  color: block.style.color,
-                  fontWeight: block.style.bold ? 'bold' : 'normal',
-                  textAlign: block.style.align,
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                  lineHeight: 1.2,
-                }}
-              >
-                {block.text}
-              </div>
-            ))}
+            {slide.textBlocks.map((block) => {
+              // Check if text contains line breaks (multi-line)
+              const isMultiLine = block.text.includes('\n')
+              // Calculate scaled font size based on container width
+              const scaledFontSize = Math.max(8, Math.round(block.style.fontSize * scaleFactor))
+
+              return (
+                <div
+                  key={block.id}
+                  className="absolute"
+                  style={{
+                    left: `${block.box.x}%`,
+                    top: `${block.box.y}%`,
+                    maxWidth: `${Math.max(block.box.width, 50)}%`, // Use maxWidth, minimum 50%
+                    fontSize: `${scaledFontSize}px`,
+                    color: block.style.color,
+                    fontWeight: block.style.bold ? 'bold' : 'normal',
+                    textAlign: block.style.align,
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                    lineHeight: 1.3,
+                    whiteSpace: isMultiLine ? 'pre-wrap' : 'nowrap',
+                  }}
+                >
+                  {block.text}
+                </div>
+              )
+            })}
           </div>
         )}
 

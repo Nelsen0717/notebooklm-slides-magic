@@ -75,20 +75,27 @@ async function performOcr(imageBase64: string): Promise<TextBlock[]> {
   const prompt = `Analyze this presentation slide image. Extract ALL text blocks with their precise positions.
 
 For each text block, provide:
-- text: the exact text content (preserve line breaks if multi-line)
+- text: the exact text content (preserve line breaks ONLY if the text is actually multi-line in the original)
 - box_2d: [ymin, xmin, ymax, xmax] coordinates in 0-1000 scale (0,0 = top-left, 1000,1000 = bottom-right)
 - font_size: estimated font size in pixels (based on image being 1920x1080)
 - is_bold: boolean (true if the text appears bold)
 - align: "left", "center", or "right" (based on text alignment)
-- color: hex color code (e.g., "#FFFFFF")
+- color: EXACT hex color code of the text (e.g., "#FFFFFF" for white, "#FFD700" for gold, "#00BFFF" for blue, etc.)
 
 CRITICAL INSTRUCTIONS:
 1. Do NOT include the "NotebookLM" watermark in results (usually in bottom-right corner)
 2. Return coordinates using the 0-1000 scale relative to image dimensions
 3. Detect Chinese characters accurately
-4. Group text that belongs together into single blocks
-5. For large headlines, estimate font_size appropriately (often 48-72px)
-6. For body text, font_size is usually 18-32px`
+4. Group text that belongs together into single blocks - keep headlines as ONE block, not split
+5. For large headlines, estimate font_size appropriately (often 48-72px for 1920x1080)
+6. For body text, font_size is usually 18-32px
+7. COLOR IS CRITICAL: Detect the ACTUAL color of each text block. Common colors include:
+   - White (#FFFFFF) for main text on dark backgrounds
+   - Gold/Yellow (#FFD700, #FFC107) for highlighted keywords
+   - Blue (#0066FF, #00BFFF) for accent text
+   - Red (#FF0000, #E53935) for emphasis
+   - If unsure, sample the dominant color from the text pixels
+8. BOX ACCURACY: Make sure the bounding box tightly fits the text, not too wide or too narrow`
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,

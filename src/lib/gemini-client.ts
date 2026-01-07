@@ -7,9 +7,58 @@ const API_ENDPOINT = '/api/process-slide'
 const MAX_RETRIES = 5
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]
 
+// Watermark region (bottom-right corner)
+// NotebookLM watermark is approximately: bottom 5%, right 12%
+const WATERMARK_REGION = {
+  xPercent: 88, // Start from 88% of width
+  yPercent: 95, // Start from 95% of height
+  widthPercent: 12, // 12% of total width
+  heightPercent: 5, // 5% of total height
+}
+
 interface ProcessResult {
   cleanImage: string
   textBlocks: TextBlock[]
+}
+
+/**
+ * Add a black mask over the watermark region to help AI inpainting
+ */
+async function maskWatermark(imageBase64: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'))
+        return
+      }
+
+      // Draw original image
+      ctx.drawImage(img, 0, 0)
+
+      // Calculate watermark region
+      const x = (WATERMARK_REGION.xPercent / 100) * img.width
+      const y = (WATERMARK_REGION.yPercent / 100) * img.height
+      const width = (WATERMARK_REGION.widthPercent / 100) * img.width
+      const height = (WATERMARK_REGION.heightPercent / 100) * img.height
+
+      // Draw black rectangle over watermark area
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(x, y, width, height)
+
+      // Convert back to base64
+      const dataUrl = canvas.toDataURL('image/png')
+      const base64 = dataUrl.split(',')[1]
+      resolve(base64)
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = `data:image/png;base64,${imageBase64}`
+  })
 }
 
 /**
@@ -18,10 +67,11 @@ interface ProcessResult {
 export async function processSlide(originalImage: string): Promise<ProcessResult> {
   const base64 = dataUrlToBase64(originalImage)
 
-  // Step 1: Remove watermark (inpainting)
-  const cleanImage = await removeWatermark(base64)
+  // Step 1: Mask watermark area with black rectangle, then inpaint
+  const maskedBase64 = await maskWatermark(base64)
+  const cleanImage = await removeWatermark(maskedBase64)
 
-  // Step 2: Extract text with OCR
+  // Step 2: Extract text with OCR (use original image for accurate OCR)
   const textBlocks = await extractText(base64)
 
   return {
