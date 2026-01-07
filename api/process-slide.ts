@@ -36,7 +36,7 @@ export default async function handler(
 
   try {
     const body = req.body as RequestBody
-    const { action, image, options } = body
+    const { action, image } = body
 
     if (!action || !image) {
       return res.status(400).json({ error: 'Missing action or image' })
