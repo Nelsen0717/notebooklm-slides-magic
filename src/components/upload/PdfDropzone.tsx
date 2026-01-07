@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useRef } from 'react'
 import { useSlidesStore } from '@/store/slides-store'
 import { parsePdf } from '@/lib/pdf-parser'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ export function PdfDropzone() {
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = useCallback(async (file: File) => {
     if (file.type !== 'application/pdf') {
@@ -61,10 +62,19 @@ export function PdfDropzone() {
     if (file) {
       handleFile(file)
     }
+    // Reset input so same file can be selected again
+    e.target.value = ''
   }, [handleFile])
+
+  const handleClick = useCallback(() => {
+    if (!isLoading) {
+      fileInputRef.current?.click()
+    }
+  }, [isLoading])
 
   return (
     <div
+      onClick={handleClick}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -76,10 +86,11 @@ export function PdfDropzone() {
       )}
     >
       <input
+        ref={fileInputRef}
         type="file"
         accept="application/pdf"
         onChange={handleInputChange}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        className="hidden"
         disabled={isLoading}
       />
 

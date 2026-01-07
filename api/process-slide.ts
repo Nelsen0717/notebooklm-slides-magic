@@ -155,19 +155,20 @@ CRITICAL INSTRUCTIONS:
  * Perform inpainting for watermark removal
  */
 async function performInpainting(imageBase64: string): Promise<string> {
-  const prompt = `Remove the "NotebookLM" watermark text and small speech bubble icon from the bottom-right corner of this presentation slide image.
+  // Use gemini-2.5-flash-image for better quality image editing
+  const prompt = `Edit this presentation slide image by removing ONLY the small "NotebookLM" watermark in the bottom-right corner.
 
-Instructions:
-1. Locate the watermark in the bottom-right corner (usually small gray text "NotebookLM" with an icon)
-2. Fill the watermark area naturally using the surrounding background
-3. Match the background texture, color, and pattern seamlessly
-4. Maintain the original image quality and resolution
-5. Do not alter any other content on the slide
-6. If the background is solid color, use that color
-7. If the background has a gradient or texture, extend it naturally`
+CRITICAL: Keep ALL existing text, graphics, and content EXACTLY as they are. Only remove the watermark.
+
+The watermark to remove:
+- Location: Bottom-right corner
+- Content: Small gray text "NotebookLM" with a speech bubble icon
+- Size: Very small, approximately 100-150 pixels wide
+
+Action: Replace the watermark area with the surrounding background color/texture. Do not modify anything else.`
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

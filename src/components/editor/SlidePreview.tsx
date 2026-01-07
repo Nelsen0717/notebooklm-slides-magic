@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Slide } from '@/store/slides-store'
 import { cn } from '@/lib/utils'
-import { Wand2, Loader2, ImageIcon, AlertCircle, Download } from 'lucide-react'
+import { Wand2, Loader2, ImageIcon, AlertCircle, Download, Eye } from 'lucide-react'
 import { downloadImage } from '@/lib/utils'
 
 interface SlidePreviewProps {
@@ -9,17 +9,21 @@ interface SlidePreviewProps {
   onProcess: () => void
 }
 
+type ViewMode = 'processed' | 'original' | 'preview'
+
 export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
-  const [showOriginal, setShowOriginal] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('processed')
 
   const isProcessing = slide.status === 'processing'
   const isCompleted = slide.status === 'completed'
   const isError = slide.status === 'error'
   const isPending = slide.status === 'pending'
 
-  const displayImage = showOriginal
+  const displayImage = viewMode === 'original'
     ? slide.originalImage
     : slide.cleanImage || slide.originalImage
+
+  const showTextOverlay = viewMode === 'preview' && isCompleted
 
   return (
     <div className="space-y-4">
@@ -28,10 +32,10 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center bg-surface-100 p-1 rounded-xl">
             <button
-              onClick={() => setShowOriginal(false)}
+              onClick={() => setViewMode('processed')}
               className={cn(
                 'px-3 py-1.5 text-sm font-semibold rounded-lg transition-all',
-                !showOriginal
+                viewMode === 'processed'
                   ? 'bg-white text-primary shadow-soft'
                   : 'text-dark-50 hover:text-dark'
               )}
@@ -39,10 +43,22 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
               處理後
             </button>
             <button
-              onClick={() => setShowOriginal(true)}
+              onClick={() => setViewMode('preview')}
+              className={cn(
+                'px-3 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center gap-1',
+                viewMode === 'preview'
+                  ? 'bg-white text-primary shadow-soft'
+                  : 'text-dark-50 hover:text-dark'
+              )}
+            >
+              <Eye className="w-3 h-3" />
+              最終預覽
+            </button>
+            <button
+              onClick={() => setViewMode('original')}
               className={cn(
                 'px-3 py-1.5 text-sm font-semibold rounded-lg transition-all',
-                showOriginal
+                viewMode === 'original'
                   ? 'bg-white text-primary shadow-soft'
                   : 'text-dark-50 hover:text-dark'
               )}
@@ -51,7 +67,7 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
             </button>
           </div>
 
-          {!showOriginal && slide.cleanImage && (
+          {viewMode === 'processed' && slide.cleanImage && (
             <button
               onClick={() => downloadImage(slide.cleanImage!, `slide-${slide.pageNumber}-clean.png`)}
               className="btn-ghost flex items-center gap-2 text-sm"
@@ -70,6 +86,31 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
           alt={`Slide ${slide.pageNumber}`}
           className="w-full h-full object-contain"
         />
+
+        {/* Text blocks overlay for preview mode */}
+        {showTextOverlay && slide.textBlocks.length > 0 && (
+          <div className="absolute inset-0 pointer-events-none">
+            {slide.textBlocks.map((block) => (
+              <div
+                key={block.id}
+                className="absolute whitespace-pre-wrap"
+                style={{
+                  left: `${block.box.x}%`,
+                  top: `${block.box.y}%`,
+                  width: `${block.box.width}%`,
+                  fontSize: `${Math.max(8, block.style.fontSize * 0.5)}px`,
+                  color: block.style.color,
+                  fontWeight: block.style.bold ? 'bold' : 'normal',
+                  textAlign: block.style.align,
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  lineHeight: 1.2,
+                }}
+              >
+                {block.text}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Processing overlay */}
         {isProcessing && (
@@ -101,14 +142,22 @@ export function SlidePreview({ slide, onProcess }: SlidePreviewProps) {
         )}
 
         {/* Watermark indicator (only on original) */}
-        {(isPending || showOriginal) && (
+        {(isPending || viewMode === 'original') && (
           <div className="absolute bottom-2 right-2 bg-dark/70 text-white text-xs px-2 py-1 rounded-md">
             📍 NotebookLM 浮水印
           </div>
         )}
 
+        {/* Preview mode badge */}
+        {viewMode === 'preview' && (
+          <div className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            最終預覽 (圖片+文字)
+          </div>
+        )}
+
         {/* Completed badge */}
-        {isCompleted && !showOriginal && (
+        {isCompleted && viewMode === 'processed' && (
           <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-md font-semibold flex items-center gap-1">
             <Wand2 className="w-3 h-3" />
             浮水印已移除
