@@ -91,6 +91,10 @@ function addTextOnlySlide(pptSlide: PptxGenJS.Slide, slide: Slide): void {
 
   // Add each text block
   for (const block of slide.textBlocks) {
+    // 計算文字是否需要換行：如果文字不包含換行符且區塊寬度較大，則不換行
+    const hasNewline = block.text.includes('\n')
+    const isLikelyTitle = block.box.width > 50 && !hasNewline && block.style.fontSize >= 24
+
     pptSlide.addText(block.text, {
       x: `${block.box.x}%`,
       y: `${block.box.y}%`,
@@ -102,7 +106,8 @@ function addTextOnlySlide(pptSlide: PptxGenJS.Slide, slide: Slide): void {
       align: block.style.align,
       valign: 'middle',
       fontFace: 'Noto Sans TC',
-      wrap: true,
+      wrap: !isLikelyTitle, // 標題類文字不換行，避免錯誤斷行
+      fit: isLikelyTitle ? 'shrink' : undefined, // 標題超出時縮小字體而非換行
     })
   }
 }
@@ -125,6 +130,10 @@ function addCombinedSlide(pptSlide: PptxGenJS.Slide, slide: Slide): void {
 
   // Add text blocks on top
   for (const block of slide.textBlocks) {
+    // 計算文字是否需要換行：如果文字不包含換行符且區塊寬度較大，則不換行
+    const hasNewline = block.text.includes('\n')
+    const isLikelyTitle = block.box.width > 50 && !hasNewline && block.style.fontSize >= 24
+
     pptSlide.addText(block.text, {
       x: `${block.box.x}%`,
       y: `${block.box.y}%`,
@@ -136,7 +145,8 @@ function addCombinedSlide(pptSlide: PptxGenJS.Slide, slide: Slide): void {
       align: block.style.align,
       valign: 'middle',
       fontFace: 'Noto Sans TC',
-      wrap: true,
+      wrap: !isLikelyTitle, // 標題類文字不換行，避免錯誤斷行
+      fit: isLikelyTitle ? 'shrink' : undefined, // 標題超出時縮小字體而非換行
     })
   }
 }

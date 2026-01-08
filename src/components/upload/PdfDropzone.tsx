@@ -2,7 +2,7 @@ import { useCallback, useState, useRef } from 'react'
 import { useSlidesStore } from '@/store/slides-store'
 import { parsePdf } from '@/lib/pdf-parser'
 import { cn } from '@/lib/utils'
-import { Upload, FileText, Loader2 } from 'lucide-react'
+import { Upload, FileText, Loader2, Sparkles } from 'lucide-react'
 
 export function PdfDropzone() {
   const { setSlides, selectAllSlides } = useSlidesStore()
@@ -79,10 +79,10 @@ export function PdfDropzone() {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={cn(
-        'relative border-2 border-dashed rounded-3xl p-12 text-center transition-all cursor-pointer group',
+        'relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer group',
         isDragging
-          ? 'border-primary bg-primary-50 scale-[1.01]'
-          : 'border-surface-300 bg-white hover:border-primary-300 hover:bg-surface-50'
+          ? 'border-primary bg-primary/10 scale-[1.01] shadow-glow'
+          : 'border-white/20 bg-surface-50/30 hover:border-primary/50 hover:bg-surface-50/50'
       )}
     >
       <input
@@ -96,19 +96,22 @@ export function PdfDropzone() {
 
       {isLoading ? (
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <div className="relative">
+            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+            <Sparkles className="w-5 h-5 text-primary absolute -top-1 -right-1 animate-pulse" />
+          </div>
           <div className="space-y-2">
-            <p className="text-lg font-semibold text-dark">
+            <p className="text-lg font-semibold text-white">
               正在解析 PDF...
             </p>
             {progress.total > 0 && (
               <>
-                <p className="text-sm text-dark-50">
+                <p className="text-sm text-neutral-400">
                   處理中 {progress.current} / {progress.total} 頁
                 </p>
-                <div className="w-64 h-2 bg-surface-200 rounded-full overflow-hidden mx-auto">
+                <div className="w-64 h-2 bg-dark-100 rounded-full overflow-hidden mx-auto">
                   <div
-                    className="h-full bg-primary rounded-full transition-all"
+                    className="h-full bg-gradient-to-r from-primary-600 to-primary rounded-full transition-all shadow-glow"
                     style={{ width: `${(progress.current / progress.total) * 100}%` }}
                   />
                 </div>
@@ -119,8 +122,10 @@ export function PdfDropzone() {
       ) : (
         <div className="flex flex-col items-center gap-4">
           <div className={cn(
-            'w-16 h-16 rounded-2xl flex items-center justify-center transition-all',
-            isDragging ? 'bg-primary text-white scale-110' : 'bg-primary-50 text-primary group-hover:scale-105'
+            'w-16 h-16 rounded-xl flex items-center justify-center transition-all',
+            isDragging
+              ? 'bg-primary text-dark-400 scale-110 shadow-glow'
+              : 'bg-primary/20 text-primary group-hover:scale-105 group-hover:bg-primary/30'
           )}>
             {isDragging ? (
               <FileText className="w-8 h-8" />
@@ -129,10 +134,10 @@ export function PdfDropzone() {
             )}
           </div>
           <div className="space-y-1">
-            <p className="text-xl font-bold text-dark">
+            <p className="text-xl font-bold text-white">
               {isDragging ? '放開以上傳' : '拖放 PDF 或點擊上傳'}
             </p>
-            <p className="text-sm text-dark-50">
+            <p className="text-sm text-neutral-400">
               支援 NotebookLM 生成的圖文簡報 PDF
             </p>
           </div>

@@ -89,8 +89,8 @@ export function ExportPanel() {
             <ChevronLeft className="w-4 h-4" />
             返回編輯
           </button>
-          <div className="w-px h-6 bg-surface-300" />
-          <h2 className="text-xl font-bold text-dark">匯出簡報</h2>
+          <div className="w-px h-6 bg-white/20" />
+          <h2 className="text-xl font-bold text-white">匯出簡報</h2>
         </div>
       </div>
 
@@ -99,7 +99,7 @@ export function ExportPanel() {
         <div className="lg:col-span-2 space-y-6">
           {/* Export Mode Selection */}
           <div className="card">
-            <h3 className="font-bold text-dark mb-4">匯出格式</h3>
+            <h3 className="font-bold text-white mb-4">匯出格式</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {exportModes.map((mode) => (
                 <button
@@ -108,23 +108,23 @@ export function ExportPanel() {
                   className={cn(
                     'p-4 rounded-xl border-2 text-left transition-all',
                     exportMode === mode.value
-                      ? 'border-primary bg-primary-50 ring-2 ring-primary-200'
-                      : 'border-surface-200 hover:border-primary-300'
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/30 shadow-glow'
+                      : 'border-white/10 hover:border-primary/50 bg-surface-100/50'
                   )}
                 >
                   <mode.icon
                     className={cn(
                       'w-8 h-8 mb-3',
-                      exportMode === mode.value ? 'text-primary' : 'text-dark-50'
+                      exportMode === mode.value ? 'text-primary' : 'text-neutral-400'
                     )}
                   />
                   <p className={cn(
                     'font-bold',
-                    exportMode === mode.value ? 'text-primary' : 'text-dark'
+                    exportMode === mode.value ? 'text-primary' : 'text-white'
                   )}>
                     {mode.label}
                   </p>
-                  <p className="text-xs text-dark-50 mt-1">
+                  <p className="text-xs text-neutral-400 mt-1">
                     {mode.description}
                   </p>
                 </button>
@@ -134,7 +134,7 @@ export function ExportPanel() {
 
           {/* Layout Selection */}
           <div className="card">
-            <h3 className="font-bold text-dark mb-4">簡報比例</h3>
+            <h3 className="font-bold text-white mb-4">簡報比例</h3>
             <div className="flex gap-4">
               {[
                 { value: '16:9', label: '16:9', desc: '寬螢幕 (推薦)' },
@@ -147,14 +147,14 @@ export function ExportPanel() {
                   className={cn(
                     'flex-1 p-4 rounded-xl border-2 transition-all',
                     layout === l.value
-                      ? 'border-primary bg-primary-50'
-                      : 'border-surface-200 hover:border-primary-300'
+                      ? 'border-primary bg-primary/10 shadow-glow'
+                      : 'border-white/10 hover:border-primary/50 bg-surface-100/50'
                   )}
                 >
                   <div
                     className={cn(
                       'mx-auto mb-2 border-2 rounded',
-                      layout === l.value ? 'border-primary' : 'border-surface-300',
+                      layout === l.value ? 'border-primary bg-primary/20' : 'border-white/20',
                       l.value === '16:9' && 'w-16 h-9',
                       l.value === '4:3' && 'w-12 h-9',
                       l.value === '9:16' && 'w-9 h-16'
@@ -162,11 +162,11 @@ export function ExportPanel() {
                   />
                   <p className={cn(
                     'font-bold text-center',
-                    layout === l.value ? 'text-primary' : 'text-dark'
+                    layout === l.value ? 'text-primary' : 'text-white'
                   )}>
                     {l.label}
                   </p>
-                  <p className="text-xs text-dark-50 text-center">{l.desc}</p>
+                  <p className="text-xs text-neutral-400 text-center">{l.desc}</p>
                 </button>
               ))}
             </div>
@@ -174,7 +174,7 @@ export function ExportPanel() {
 
           {/* Filename */}
           <div className="card">
-            <h3 className="font-bold text-dark mb-4">檔案名稱</h3>
+            <h3 className="font-bold text-white mb-4">檔案名稱</h3>
             <div className="flex items-center gap-3">
               <input
                 type="text"
@@ -183,48 +183,48 @@ export function ExportPanel() {
                 className="input flex-1"
                 placeholder="輸入檔案名稱..."
               />
-              <span className="text-dark-50 font-medium">.pptx</span>
+              <span className="text-neutral-400 font-medium">.pptx</span>
             </div>
           </div>
         </div>
 
         {/* Export Summary */}
         <div className="space-y-6">
-          <div className="card bg-dark text-white">
-            <h3 className="font-bold mb-4 flex items-center gap-2">
+          <div className="bg-gradient-to-b from-surface-50 to-surface-100 border border-primary/30 rounded-xl p-6 text-white shadow-glow">
+            <h3 className="font-bold mb-4 flex items-center gap-2 text-primary">
               <FileOutput className="w-5 h-5" />
               匯出摘要
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-white/70">頁數</span>
-                <span className="font-bold">{preview.totalSlides} 頁</span>
+                <span className="text-neutral-400">頁數</span>
+                <span className="font-bold text-white">{preview.totalSlides} 頁</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/70">包含圖片</span>
-                <span className="font-bold">
+                <span className="text-neutral-400">包含圖片</span>
+                <span className="font-bold text-white">
                   {preview.hasImages ? '是' : '否'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/70">包含文字</span>
-                <span className="font-bold">
+                <span className="text-neutral-400">包含文字</span>
+                <span className="font-bold text-white">
                   {preview.hasText ? '是' : '否'}
                 </span>
               </div>
               {preview.hasText && (
                 <div className="flex justify-between">
-                  <span className="text-white/70">文字區塊</span>
-                  <span className="font-bold">{preview.textBlockCount} 個</span>
+                  <span className="text-neutral-400">文字區塊</span>
+                  <span className="font-bold text-white">{preview.textBlockCount} 個</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-white/70">比例</span>
-                <span className="font-bold">{layout}</span>
+                <span className="text-neutral-400">比例</span>
+                <span className="font-bold text-white">{layout}</span>
               </div>
             </div>
 
-            <hr className="my-4 border-white/20" />
+            <hr className="my-4 border-white/10" />
 
             <button
               onClick={handleExport}
@@ -232,10 +232,10 @@ export function ExportPanel() {
               className={cn(
                 'w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all',
                 isExporting
-                  ? 'bg-white/20 text-white/70 cursor-not-allowed'
+                  ? 'bg-white/10 text-white/50 cursor-not-allowed'
                   : exportComplete
-                  ? 'bg-green-500 text-white hover:bg-green-600'
-                  : 'bg-white text-dark hover:bg-white/90'
+                  ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg'
+                  : 'bg-primary text-dark-400 hover:bg-primary-300 shadow-glow'
               )}
             >
               {isExporting ? (
@@ -257,16 +257,16 @@ export function ExportPanel() {
             </button>
 
             {selectedSlides.length === 0 && (
-              <p className="text-xs text-white/50 text-center mt-3">
+              <p className="text-xs text-neutral-500 text-center mt-3">
                 沒有已處理完成的簡報可以匯出
               </p>
             )}
           </div>
 
           {/* Tips */}
-          <div className="card bg-primary-50 border-primary-200">
-            <h4 className="font-bold text-primary mb-2">💡 小提示</h4>
-            <ul className="text-sm text-primary-700 space-y-1">
+          <div className="card bg-primary/5 border border-primary/20">
+            <h4 className="font-bold text-primary mb-2">小提示</h4>
+            <ul className="text-sm text-neutral-300 space-y-1">
               <li>• 「圖片 + 文字」模式最適合需要編輯的場合</li>
               <li>• 「純圖片」模式保持最佳視覺效果</li>
               <li>• 匯出後可在 PowerPoint 中繼續編輯</li>

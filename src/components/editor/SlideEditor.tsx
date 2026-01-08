@@ -124,8 +124,8 @@ export function SlideEditor() {
             <ChevronLeft className="w-4 h-4" />
             返回選擇
           </button>
-          <div className="w-px h-6 bg-surface-300" />
-          <h2 className="text-xl font-bold text-dark">處理 & 編輯</h2>
+          <div className="w-px h-6 bg-white/20" />
+          <h2 className="text-xl font-bold text-white">處理 & 編輯</h2>
         </div>
 
         <div className="flex items-center gap-3">
@@ -176,15 +176,15 @@ export function SlideEditor() {
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
               <span className="text-sm">
-                <span className="font-bold text-green-600">{completedCount}</span>
-                <span className="text-dark-50"> 已完成</span>
+                <span className="font-bold text-green-400">{completedCount}</span>
+                <span className="text-neutral-400"> 已完成</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-dark-50" />
+              <Clock className="w-5 h-5 text-neutral-500" />
               <span className="text-sm">
-                <span className="font-bold text-dark">{pendingCount}</span>
-                <span className="text-dark-50"> 待處理</span>
+                <span className="font-bold text-white">{pendingCount}</span>
+                <span className="text-neutral-400"> 待處理</span>
               </span>
             </div>
             {processingCount > 0 && (
@@ -192,7 +192,7 @@ export function SlideEditor() {
                 <Loader2 className="w-5 h-5 text-primary animate-spin" />
                 <span className="text-sm">
                   <span className="font-bold text-primary">{processingCount}</span>
-                  <span className="text-dark-50"> 處理中</span>
+                  <span className="text-neutral-400"> 處理中</span>
                 </span>
               </div>
             )}
@@ -200,8 +200,8 @@ export function SlideEditor() {
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-red-500" />
                 <span className="text-sm">
-                  <span className="font-bold text-red-600">{errorCount}</span>
-                  <span className="text-dark-50"> 錯誤</span>
+                  <span className="font-bold text-red-400">{errorCount}</span>
+                  <span className="text-neutral-400"> 錯誤</span>
                 </span>
               </div>
             )}
@@ -209,13 +209,13 @@ export function SlideEditor() {
 
           {isProcessing && (
             <div className="flex items-center gap-3">
-              <div className="w-48 h-2 bg-surface-200 rounded-full overflow-hidden">
+              <div className="w-48 h-2 bg-surface-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary rounded-full transition-all"
+                  className="h-full bg-gradient-to-r from-primary-600 to-primary rounded-full transition-all shadow-glow"
                   style={{ width: `${processingProgress}%` }}
                 />
               </div>
-              <span className="text-sm font-semibold text-dark-50">
+              <span className="text-sm font-semibold text-neutral-400">
                 {Math.round(processingProgress)}%
               </span>
             </div>
@@ -229,9 +229,9 @@ export function SlideEditor() {
           {/* Slide Preview */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-dark">
+              <h3 className="font-bold text-white">
                 第 {currentSlide.pageNumber} 頁
-                <span className="text-dark-50 font-normal ml-2">
+                <span className="text-neutral-400 font-normal ml-2">
                   ({currentSlideIndex + 1} / {selectedSlides.length})
                 </span>
               </h3>
@@ -240,14 +240,14 @@ export function SlideEditor() {
                 <button
                   onClick={goToPrevSlide}
                   disabled={currentSlideIndex === 0}
-                  className="p-2 rounded-lg hover:bg-surface-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="p-2 rounded-lg text-neutral-400 hover:bg-surface-100 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                   onClick={goToNextSlide}
                   disabled={currentSlideIndex === selectedSlides.length - 1}
-                  className="p-2 rounded-lg hover:bg-surface-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="p-2 rounded-lg text-neutral-400 hover:bg-surface-100 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
@@ -262,7 +262,7 @@ export function SlideEditor() {
 
           {/* Text Editor */}
           <div className="card">
-            <h3 className="font-bold text-dark mb-4">文字區塊</h3>
+            <h3 className="font-bold text-white mb-4">文字區塊</h3>
             <TextBlockEditor slide={currentSlide} />
           </div>
         </div>
@@ -270,7 +270,7 @@ export function SlideEditor() {
 
       {/* Slide Thumbnails */}
       <div className="card">
-        <h3 className="font-bold text-dark mb-4">所有選取的簡報</h3>
+        <h3 className="font-bold text-white mb-4">所有選取的簡報</h3>
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
           {selectedSlides.map((slide, index) => (
             <button
@@ -279,8 +279,8 @@ export function SlideEditor() {
               className={cn(
                 'flex-shrink-0 w-32 rounded-xl overflow-hidden border-2 transition-all',
                 currentSlideIndex === index
-                  ? 'border-primary ring-2 ring-primary-200'
-                  : 'border-surface-200 hover:border-primary-300'
+                  ? 'border-primary ring-2 ring-primary/30 shadow-glow'
+                  : 'border-white/10 hover:border-primary/50'
               )}
             >
               <div className="aspect-video relative">
@@ -296,15 +296,15 @@ export function SlideEditor() {
                   slide.status === 'completed' && 'bg-green-500',
                   slide.status === 'processing' && 'bg-primary',
                   slide.status === 'error' && 'bg-red-500',
-                  slide.status === 'pending' && 'bg-surface-300'
+                  slide.status === 'pending' && 'bg-neutral-600'
                 )}>
                   {slide.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-white" />}
-                  {slide.status === 'processing' && <Loader2 className="w-3 h-3 text-white animate-spin" />}
+                  {slide.status === 'processing' && <Loader2 className="w-3 h-3 text-dark-400 animate-spin" />}
                   {slide.status === 'error' && <AlertCircle className="w-3 h-3 text-white" />}
                 </div>
               </div>
-              <div className="bg-white px-2 py-1 text-center">
-                <span className="text-xs font-semibold text-dark-50">
+              <div className="bg-surface-50 px-2 py-1 text-center border-t border-white/5">
+                <span className="text-xs font-semibold text-neutral-400">
                   {slide.pageNumber}
                 </span>
               </div>

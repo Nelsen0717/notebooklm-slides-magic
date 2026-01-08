@@ -7,14 +7,11 @@ const API_ENDPOINT = '/api/process-slide'
 const MAX_RETRIES = 5
 const RETRY_DELAYS = [1000, 2000, 4000, 8000, 16000]
 
-// Watermark region (bottom-right corner)
-// NotebookLM watermark - enlarged area to ensure full coverage
-const WATERMARK_REGION = {
-  xPercent: 80, // Start from 80% of width (more left)
-  yPercent: 92, // Start from 92% of height (higher up)
-  widthPercent: 20, // 20% of total width
-  heightPercent: 8, // 8% of total height
-}
+// Image compression settings
+// Vercel has 4.5MB body limit, we target max 3MB for safety
+const MAX_IMAGE_SIZE_BYTES = 3 * 1024 * 1024 // 3MB
+const COMPRESSION_QUALITY_STEPS = [0.9, 0.8, 0.7, 0.6, 0.5]
+const MAX_DIMENSION = 1920 // Max width/height
 
 interface ProcessResult {
   cleanImage: string
@@ -22,57 +19,161 @@ interface ProcessResult {
 }
 
 /**
- * Add a black mask over the watermark region to help AI inpainting
+ * Compress image to fit within size limit
+ * This is critical for mobile devices which may have larger images
  */
-async function maskWatermark(imageBase64: string): Promise<string> {
-  return new Promise((resolve, reject) => {
+async function compressImage(base64WithoutPrefix: string): Promise<string> {
+  return new Promise((resolve) => {
     const img = new Image()
     img.onload = () => {
       const canvas = document.createElement('canvas')
-      canvas.width = img.width
-      canvas.height = img.height
+      let width = img.width
+      let height = img.height
+
+      // Resize if too large
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+        console.log(`[compressImage] Resizing from ${img.width}x${img.height} to ${width}x${height}`)
+      }
+
+      canvas.width = width
+      canvas.height = height
       const ctx = canvas.getContext('2d')
 
       if (!ctx) {
-        reject(new Error('Failed to get canvas context'))
+        console.warn('[compressImage] Failed to get canvas context')
+        resolve(base64WithoutPrefix)
         return
       }
 
-      // Draw original image
-      ctx.drawImage(img, 0, 0)
+      ctx.drawImage(img, 0, 0, width, height)
 
-      // Calculate watermark region
-      const x = (WATERMARK_REGION.xPercent / 100) * img.width
-      const y = (WATERMARK_REGION.yPercent / 100) * img.height
-      const width = (WATERMARK_REGION.widthPercent / 100) * img.width
-      const height = (WATERMARK_REGION.heightPercent / 100) * img.height
+      // Try different quality levels until size is acceptable
+      for (const quality of COMPRESSION_QUALITY_STEPS) {
+        const dataUrl = canvas.toDataURL('image/jpeg', quality)
+        const base64 = dataUrl.split(',')[1]
+        const sizeBytes = Math.round(base64.length * 0.75) // Base64 overhead
 
-      // Draw black rectangle over watermark area
-      ctx.fillStyle = '#000000'
-      ctx.fillRect(x, y, width, height)
+        if (sizeBytes <= MAX_IMAGE_SIZE_BYTES) {
+          console.log(`[compressImage] Compressed to ${(sizeBytes / 1024 / 1024).toFixed(2)}MB at quality ${quality}`)
+          resolve(base64)
+          return
+        }
+      }
 
-      // Convert back to base64
-      const dataUrl = canvas.toDataURL('image/png')
-      const base64 = dataUrl.split(',')[1]
-      resolve(base64)
+      // If still too large, use lowest quality
+      const finalDataUrl = canvas.toDataURL('image/jpeg', 0.4)
+      const finalBase64 = finalDataUrl.split(',')[1]
+      console.log(`[compressImage] Used minimum quality, size: ${(finalBase64.length * 0.75 / 1024 / 1024).toFixed(2)}MB`)
+      resolve(finalBase64)
     }
-    img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = `data:image/png;base64,${imageBase64}`
+
+    img.onerror = (e) => {
+      console.error('[compressImage] Image load failed', e)
+      resolve(base64WithoutPrefix)
+    }
+
+    img.src = `data:image/png;base64,${base64WithoutPrefix}`
   })
 }
 
 /**
- * Process a slide: remove watermark and extract text
+ * Apply a BLACK MASK over the watermark area before sending to AI
+ *
+ * Key insight from working implementation:
+ * - AI is better at "removing a black box" than "finding and removing a watermark"
+ * - The black mask forces AI to understand what needs to be inpainted
+ *
+ * NotebookLM watermark location: Bottom-right corner
+ * Mask size: 13% width, 6% height (based on working implementation)
+ */
+async function applyBlackMask(base64WithoutPrefix: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let width = img.width
+      let height = img.height
+
+      // Resize if too large (same as compressImage)
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+
+      if (!ctx) {
+        console.warn('[applyBlackMask] Failed to get canvas context, returning original')
+        resolve(base64WithoutPrefix)
+        return
+      }
+
+      // Draw original image (resized)
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Apply black mask over watermark area
+      // NotebookLM watermark is consistently at bottom-right
+      const maskW = width * 0.13  // 13% width covers logo + text
+      const maskH = height * 0.06 // 6% height
+      const x = width - maskW     // Right edge
+      const y = height - maskH    // Bottom edge
+
+      ctx.fillStyle = '#000000' // Pure black mask
+      ctx.fillRect(x, y, maskW, maskH)
+
+      // Compress output
+      for (const quality of COMPRESSION_QUALITY_STEPS) {
+        const dataUrl = canvas.toDataURL('image/jpeg', quality)
+        const base64 = dataUrl.split(',')[1]
+        const sizeBytes = Math.round(base64.length * 0.75)
+
+        if (sizeBytes <= MAX_IMAGE_SIZE_BYTES) {
+          resolve(base64)
+          return
+        }
+      }
+
+      // Fallback to lowest quality
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.4)
+      resolve(dataUrl.split(',')[1])
+    }
+
+    img.onerror = (e) => {
+      console.error('[applyBlackMask] Image load failed', e)
+      resolve(base64WithoutPrefix)
+    }
+
+    img.src = `data:image/png;base64,${base64WithoutPrefix}`
+  })
+}
+
+/**
+ * Process a slide: remove all text (including watermark) and extract text
+ *
+ * Strategy (from working implementation):
+ * 1. Apply BLACK MASK over watermark area
+ * 2. Send MASKED image to AI with prompts that explicitly mention "remove black box"
+ * 3. OCR on ORIGINAL image (without mask) for accurate text detection
+ *
+ * CRITICAL: Images are compressed to avoid HTTP 413 errors on mobile
  */
 export async function processSlide(originalImage: string): Promise<ProcessResult> {
   const base64 = dataUrlToBase64(originalImage)
 
-  // Step 1: Mask watermark area with black rectangle, then inpaint
-  const maskedBase64 = await maskWatermark(base64)
-  const cleanImage = await removeWatermark(maskedBase64)
+  // Step 1: Apply black mask over watermark AND compress
+  // This also resizes to max 1920px and compresses to JPEG
+  const maskedImage = await applyBlackMask(base64)
+  const cleanImage = await removeAllText(maskedImage)
 
-  // Step 2: Extract text with OCR (use original image for accurate OCR)
-  const textBlocks = await extractText(base64)
+  // Step 2: Extract text with OCR (compress image first)
+  const compressedBase64 = await compressImage(base64)
+  const textBlocks = await extractText(compressedBase64)
 
   return {
     cleanImage: base64ToDataUrl(cleanImage),
@@ -81,26 +182,23 @@ export async function processSlide(originalImage: string): Promise<ProcessResult
 }
 
 /**
- * Remove watermark using AI inpainting
+ * Remove ALL text from slide using AI inpainting
+ *
+ * EXPECTS: Image with black mask already applied over watermark area
+ * The API prompts explicitly tell AI to "remove the black box"
  */
-async function removeWatermark(imageBase64: string): Promise<string> {
+async function removeAllText(imageBase64: string): Promise<string> {
   const response = await fetchWithRetry(API_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'inpaint',
       image: imageBase64,
-      options: {
-        removeWatermark: true,
-        // NotebookLM watermark is in the bottom-right corner
-        // Approximate region: bottom 5%, right 15%
-        watermarkRegion: [950, 850, 1000, 1000], // [ymin, xmin, ymax, xmax] in 0-1000 scale
-      },
     }),
   })
 
   if (!response.success) {
-    throw new Error(response.error ?? 'Watermark removal failed')
+    throw new Error(response.error ?? 'Text removal failed')
   }
 
   return response.cleanImage ?? ''
@@ -165,6 +263,14 @@ interface ApiResponse {
 }
 
 /**
+ * 獲取 auth token
+ */
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('auth_token')
+}
+
+/**
  * Fetch with retry logic for rate limiting
  */
 async function fetchWithRetry(
@@ -173,10 +279,25 @@ async function fetchWithRetry(
   retryCount = 0
 ): Promise<ApiResponse> {
   try {
-    const response = await fetch(url, options)
+    // 加入 auth token
+    const token = getAuthToken()
+    const headers = new Headers(options.headers)
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+
+    const response = await fetch(url, { ...options, headers })
 
     if (response.ok) {
       return await response.json()
+    }
+
+    // Handle unauthorized - token expired
+    if (response.status === 401) {
+      // 清除過期的 token
+      localStorage.removeItem('auth_token')
+      window.location.reload() // 強制重新載入以顯示登入頁
+      throw new Error('登入已過期，請重新登入')
     }
 
     // Handle rate limiting

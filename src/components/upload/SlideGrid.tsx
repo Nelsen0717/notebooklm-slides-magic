@@ -48,17 +48,17 @@ export function SlideGrid() {
   return (
     <div className="card">
       {/* Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-surface-200">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           <button
             onClick={allSelected ? deselectAllSlides : selectAllSlides}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all',
+              'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all',
               allSelected
-                ? 'bg-primary text-white'
+                ? 'bg-primary text-dark-400 shadow-glow'
                 : someSelected
-                ? 'bg-primary-100 text-primary'
-                : 'bg-surface-200 text-dark hover:bg-surface-300'
+                ? 'bg-primary/20 text-primary'
+                : 'bg-surface-50 text-neutral-300 hover:bg-surface-100 hover:text-white'
             )}
           >
             {allSelected ? (
@@ -71,7 +71,7 @@ export function SlideGrid() {
 
           <button
             onClick={invertSelection}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-surface-200 text-dark hover:bg-surface-300 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-surface-50 text-neutral-300 hover:bg-surface-100 hover:text-white transition-all"
           >
             <RefreshCw className="w-4 h-4" />
             反轉選擇
@@ -79,14 +79,14 @@ export function SlideGrid() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-dark-50 uppercase">縮圖大小</span>
+          <span className="text-xs font-semibold text-neutral-400 uppercase">縮圖大小</span>
           <input
             type="range"
             min={150}
             max={400}
             value={thumbnailSize}
             onChange={(e) => setThumbnailSize(Number(e.target.value))}
-            className="w-32 h-2 bg-surface-200 rounded-lg appearance-none cursor-pointer accent-primary"
+            className="w-32 h-2 bg-surface-100 rounded-lg appearance-none cursor-pointer accent-primary"
           />
         </div>
       </div>
@@ -106,10 +106,10 @@ export function SlideGrid() {
               key={slide.id}
               onClick={(e) => handleSlideClick(slide.id, index, e)}
               className={cn(
-                'group relative rounded-2xl overflow-hidden cursor-pointer transition-all border-2',
+                'group relative rounded-xl overflow-hidden cursor-pointer transition-all border-2',
                 isSelected
-                  ? 'border-primary shadow-medium ring-2 ring-primary-200'
-                  : 'border-surface-200 hover:border-primary-300 hover:shadow-soft'
+                  ? 'border-primary shadow-glow ring-2 ring-primary/30'
+                  : 'border-white/10 hover:border-primary/50 hover:shadow-soft'
               )}
             >
               {/* Image */}
@@ -124,26 +124,26 @@ export function SlideGrid() {
                 {/* Selection indicator */}
                 <div
                   className={cn(
-                    'absolute top-2 right-2 w-6 h-6 rounded-lg flex items-center justify-center transition-all',
+                    'absolute top-2 right-2 w-6 h-6 rounded-md flex items-center justify-center transition-all',
                     isSelected
-                      ? 'bg-primary text-white'
-                      : 'bg-white/80 text-dark-50 opacity-0 group-hover:opacity-100'
+                      ? 'bg-primary text-dark-400 shadow-glow'
+                      : 'bg-dark/60 text-white/50 opacity-0 group-hover:opacity-100'
                   )}
                 >
                   {isSelected && <Check className="w-4 h-4" />}
                 </div>
 
                 {/* Watermark indicator */}
-                <div className="absolute bottom-2 right-2 bg-dark/60 text-white text-[10px] px-2 py-0.5 rounded-md font-medium">
+                <div className="absolute bottom-2 right-2 bg-dark/80 text-neutral-400 text-[10px] px-2 py-0.5 rounded-md font-medium border border-white/10">
                   浮水印
                 </div>
               </div>
 
               {/* Page number */}
-              <div className="bg-white px-3 py-2 text-center">
+              <div className="bg-surface-50 px-3 py-2 text-center border-t border-white/5">
                 <span className={cn(
                   'text-sm font-bold',
-                  isSelected ? 'text-primary' : 'text-dark-50'
+                  isSelected ? 'text-primary' : 'text-neutral-400'
                 )}>
                   第 {slide.pageNumber} 頁
                 </span>
@@ -154,8 +154,8 @@ export function SlideGrid() {
       </div>
 
       {/* Hint */}
-      <p className="text-xs text-dark-50 text-center mt-6">
-        💡 按住 Shift 點擊可以範圍選取
+      <p className="text-xs text-neutral-500 text-center mt-6">
+        按住 Shift 點擊可以範圍選取
       </p>
     </div>
   )

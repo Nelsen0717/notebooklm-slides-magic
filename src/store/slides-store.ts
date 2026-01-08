@@ -30,6 +30,10 @@ export interface Slide {
 export type ExportMode = 'images' | 'text' | 'combined'
 
 interface SlidesStore {
+  // Auth State
+  authToken: string | null
+  isAuthenticated: boolean
+
   // State
   step: 1 | 2 | 3
   slides: Slide[]
@@ -39,6 +43,13 @@ interface SlidesStore {
   processingProgress: number
   exportMode: ExportMode
   exportFilename: string
+
+  // Eyedropper state (for color picking from image)
+  eyedropperActiveBlockId: string | null  // Which text block is waiting for color pick
+
+  // Auth Actions
+  setAuthToken: (token: string | null) => void
+  logout: () => void
 
   // Actions
   setStep: (step: 1 | 2 | 3) => void
@@ -57,10 +68,19 @@ interface SlidesStore {
   updateTextBlock: (slideId: string, blockId: string, updates: Partial<TextBlock>) => void
   addTextBlock: (slideId: string, block: TextBlock) => void
   deleteTextBlock: (slideId: string, blockId: string) => void
+  setEyedropperActiveBlockId: (blockId: string | null) => void
   reset: () => void
 }
 
+// 從 localStorage 讀取 token
+const getStoredToken = (): string | null => {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('auth_token')
+}
+
 const initialState = {
+  authToken: getStoredToken(),
+  isAuthenticated: !!getStoredToken(),
   step: 1 as const,
   slides: [] as Slide[],
   selectedSlideIds: new Set<string>(),
@@ -69,10 +89,26 @@ const initialState = {
   processingProgress: 0,
   exportMode: 'combined' as ExportMode,
   exportFilename: `NotebookLM_Export_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
+  eyedropperActiveBlockId: null as string | null,
 }
 
 export const useSlidesStore = create<SlidesStore>((set) => ({
   ...initialState,
+
+  // Auth Actions
+  setAuthToken: (token) => {
+    if (token) {
+      localStorage.setItem('auth_token', token)
+    } else {
+      localStorage.removeItem('auth_token')
+    }
+    set({ authToken: token, isAuthenticated: !!token })
+  },
+
+  logout: () => {
+    localStorage.removeItem('auth_token')
+    set({ authToken: null, isAuthenticated: false })
+  },
 
   setStep: (step) => set({ step }),
 
@@ -155,6 +191,8 @@ export const useSlidesStore = create<SlidesStore>((set) => ({
         : slide
     ),
   })),
+
+  setEyedropperActiveBlockId: (blockId) => set({ eyedropperActiveBlockId: blockId }),
 
   reset: () => set(initialState),
 }))
