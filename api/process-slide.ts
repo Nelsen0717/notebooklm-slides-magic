@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyToken } from './auth'
+import { verifyToken } from './_utils/auth'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 

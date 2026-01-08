@@ -99,19 +99,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action, email, password, token } = req.body
 
     if (action === 'login') {
-      // 驗證 email
-      if (!secureCompare(email?.toLowerCase() || '', AUTH_EMAIL.toLowerCase())) {
-        // 故意延遲回應以防止暴力破解
+      const inputEmail = (email || '').toLowerCase().trim()
+      const expectedEmail = AUTH_EMAIL.toLowerCase().trim()
+
+      console.log('[Auth] Login attempt:', inputEmail)
+      console.log('[Auth] Expected email:', expectedEmail)
+
+      // 驗證 email（使用簡單比對，因為 email 不敏感）
+      if (inputEmail !== expectedEmail) {
+        console.log('[Auth] Email mismatch')
         await new Promise(r => setTimeout(r, 1000))
         return res.status(401).json({ success: false, error: '帳號或密碼錯誤' })
       }
 
       // 驗證密碼
       const passwordHash = hashPassword(password || '')
-      if (!secureCompare(passwordHash, AUTH_PASSWORD_HASH)) {
+      const expectedHash = AUTH_PASSWORD_HASH.trim()
+
+      console.log('[Auth] Password hash:', passwordHash.substring(0, 10) + '...')
+      console.log('[Auth] Expected hash:', expectedHash.substring(0, 10) + '...')
+
+      if (!secureCompare(passwordHash, expectedHash)) {
+        console.log('[Auth] Password mismatch')
         await new Promise(r => setTimeout(r, 1000))
         return res.status(401).json({ success: false, error: '帳號或密碼錯誤' })
       }
+
+      console.log('[Auth] Login successful!')
 
       // 生成 token
       const authToken = generateToken(email)
