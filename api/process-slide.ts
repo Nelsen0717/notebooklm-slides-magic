@@ -1,7 +1,59 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { verifyToken } from './_utils/auth'
+import { createHash, timingSafeEqual } from 'crypto'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+function requireEnv(name: string): string {
+  const v = process.env[name]
+  if (!v) throw new Error(`Missing required env: ${name}`)
+  return v
+}
+const JWT_SECRET = requireEnv('JWT_SECRET')
+
+/**
+ * 安全的字串比對（防止 timing attack）
+ */
+function secureCompare(a: string, b: string): boolean {
+  try {
+    const bufA = Buffer.from(a)
+    const bufB = Buffer.from(b)
+    if (bufA.length !== bufB.length) return false
+    return timingSafeEqual(bufA, bufB)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 驗證 token（內聯版本）
+ */
+function verifyToken(token: string): { valid: boolean; email?: string } {
+  try {
+    const [payloadStr, signature] = token.split('.')
+    if (!payloadStr || !signature) return { valid: false }
+
+    // 驗證簽名
+    const expectedSig = createHash('sha256')
+      .update(payloadStr + JWT_SECRET)
+      .digest('base64url')
+
+    if (!secureCompare(signature, expectedSig)) {
+      return { valid: false }
+    }
+
+    // 解析 payload
+    const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString())
+
+    // 檢查過期
+    if (payload.exp < Date.now()) {
+      return { valid: false }
+    }
+
+    return { valid: true, email: payload.email }
+  } catch (err) {
+    console.error('[Auth] Token verification error:', err)
+    return { valid: false }
+  }
+}
 
 interface RequestBody {
   action: 'ocr' | 'inpaint'
@@ -94,39 +146,42 @@ export default async function handler(
  * Perform OCR with Gemini
  */
 async function performOcr(imageBase64: string): Promise<TextBlock[]> {
-  const prompt = `Extract ALL text from this presentation slide with positions and styles.
+  const prompt = `You are a precise OCR system. Extract ALL visible text from this presentation slide.
 
-For each text block, return:
-- text: exact content
+STEP 1 - ANALYZE BACKGROUND:
+Look at the overall slide background color:
+- If background is DARK (black, navy, dark purple, etc.) → text will be LIGHT colored
+- If background is LIGHT (white, cream, beige, etc.) → text will be DARK colored
+
+STEP 2 - EXTRACT EACH TEXT BLOCK:
+For each piece of text, return:
+- text: exact content (preserve line breaks with \\n)
 - box_2d: [ymin, xmin, ymax, xmax] in 0-1000 scale
-- font_size: pixels for 1920x1080
-- is_bold: boolean
+- font_size: estimated size in pixels for 1920x1080 canvas
+- is_bold: true if text appears bold
 - align: "left" | "center" | "right"
-- color: hex code (CRITICAL - see below!)
+- color: hex color code (MANDATORY - see rules below)
 
-RULES:
+COLOR DETECTION RULES (CRITICAL):
+1. Analyze the ACTUAL pixel color of the text, not assumptions
+2. On DARK backgrounds:
+   - White text: #FFFFFF
+   - Gold/Yellow text: #E8D5A3 or #FFD700
+   - Light gray text: #CCCCCC or #AAAAAA
+3. On LIGHT/WHITE backgrounds:
+   - Black text: #000000
+   - Dark gray text: #333333 or #444444
+   - Medium gray text: #666666 or #777777
+4. ⚠️ NEVER return #FFFFFF for text on white/light backgrounds!
+5. ⚠️ NEVER return #000000 for text on dark backgrounds!
 
-1. SKIP "NotebookLM" watermark (bottom-right corner)
+SKIP: The "NotebookLM" watermark in bottom-right corner
 
-2. COLOR DETECTION - VERY IMPORTANT:
-   NotebookLM slides use specific colors:
-   - #E8D5A3 or #D4AF37 = Gold/Yellow headlines (COMMON! Look for warm yellow-ish text)
-   - #FFFFFF = Pure white (only if truly bright white)
-   - #000000 = Black text (in chat bubbles, light backgrounds)
-   - #666666 = Gray captions
-
-   IMPORTANT: If text has ANY yellow/gold/beige tint, use #E8D5A3 NOT #FFFFFF!
-   Headlines and emphasis text are usually GOLD, not white.
-
-3. BOUNDING BOX:
-   - Coordinates relative to image (0,0 = top-left, 1000,1000 = bottom-right)
-   - TIGHT fit around visible text
-
-4. FONT SIZE (for 1920x1080):
-   - Giant numbers: 80-120px
-   - Headlines: 48-72px
-   - Body text: 24-36px
-   - Captions: 14-20px`
+FONT SIZE GUIDELINES:
+- Large titles/numbers: 72-120px
+- Headlines: 48-72px
+- Body text: 24-36px
+- Captions: 14-24px`
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -161,7 +216,7 @@ RULES:
                 align: { type: 'STRING' },
                 color: { type: 'STRING' },
               },
-              required: ['text', 'box_2d'],
+              required: ['text', 'box_2d', 'color', 'font_size'],
             },
           },
         },
@@ -193,31 +248,22 @@ RULES:
  * Perform inpainting to remove ALL text from the slide
  * This creates a clean background that editable text can be overlaid on
  *
- * CRITICAL: Uses gemini-2.5-flash-image model (NOT gemini-2.0-flash-exp-image-generation)
+ * CRITICAL: Uses gemini-2.5-flash-image (Nano Banana) for image editing
+ * Tier 1 API access required
  * The imageBase64 should already have a black mask applied over the watermark area
  */
 async function performInpainting(imageBase64: string): Promise<string> {
-  // Prompt variations - rotate through these on retry
-  // Key insight: Tell AI explicitly about the BLACK BOX to remove
+  // Prompt variations - rotate through on retry
   const promptVariations = [
-    // 1. Most explicit - works best
     `INPAINTING & CLEANUP TASK:
-1. There is a BLACK MASK BOX in the bottom-right corner. It is covering a logo. You MUST remove this black box and reconstruct the background behind it.
+1. There is a BLACK MASK BOX in the bottom-right corner covering a logo. You MUST remove this black box and reconstruct the background behind it.
 2. Remove ALL other text from the slide.
 3. The final result should contain NO text and NO black box.
 4. Output the clean image only.`,
 
-    // 2. Direct instruction
     `Edit this image. Remove all text. There is a black rectangle in the bottom-right corner blocking a watermark. Remove the black rectangle and fill the gap with the background pattern.`,
 
-    // 3. Simple
     `Remove all text. Remove the black square in the corner. Return clean background.`,
-
-    // 4. Cleanup angle
-    `Clean this slide. Erase all letters. Erase the black censorship box in the bottom right.`,
-
-    // 5. Final fallback
-    `Remove text. Remove black mask. Inpaint background.`,
   ]
 
   const maxAttempts = 5
@@ -228,7 +274,7 @@ async function performInpainting(imageBase64: string): Promise<string> {
     console.log(`[Inpainting] Attempt ${attempt}/${maxAttempts} with prompt variation ${(attempt - 1) % promptVariations.length + 1}`)
 
     try {
-      // CRITICAL: Use correct model name - gemini-2.5-flash-image
+      // CRITICAL: Use gemini-2.5-flash-image (Nano Banana) for image editing
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
         {

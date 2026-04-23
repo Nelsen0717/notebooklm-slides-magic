@@ -6,9 +6,14 @@ import { createHash, timingSafeEqual } from 'crypto'
 // AUTH_PASSWORD_HASH=<hashed password>
 // JWT_SECRET=<random secret>
 
-const AUTH_EMAIL = process.env.AUTH_EMAIL || 'nelsen.chen@funraise.com.tw'
-const AUTH_PASSWORD_HASH = process.env.AUTH_PASSWORD_HASH || hashPassword('funraise888')
-const JWT_SECRET = process.env.JWT_SECRET || 'notebooklm-slides-magic-secret-key-2026'
+function requireEnv(name: string): string {
+  const v = process.env[name]
+  if (!v) throw new Error(`Missing required env: ${name}`)
+  return v
+}
+const AUTH_EMAIL = requireEnv('AUTH_EMAIL')
+const AUTH_PASSWORD_HASH = requireEnv('AUTH_PASSWORD_HASH')
+const JWT_SECRET = requireEnv('JWT_SECRET')
 
 // Token 有效期：7 天
 const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000
