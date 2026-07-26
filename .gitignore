@@ -35,3 +35,5 @@ coverage/
 
 # Vercel
 .vercel
+.env*
+!.env.example
